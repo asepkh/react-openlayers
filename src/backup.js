@@ -26,25 +26,24 @@ import "./App.scss";
 import "ol/ol.css";
 
 const initialOptions = {
-  center: [53566969.48271899, -688971.3316195873],
-  zoom: 5.1,
+  center: [79974184.97513326, -31426.48475497072],
+  zoom: 3.5,
 };
 
-const clusterCount = 2000;
-const clusterDistance = 50;
-const pinClusterFeatures = new Array(clusterCount);
-for (let i = 0; i < clusterCount; ++i) {
-  const coordinates = [
-    54000000 + 2 * 3000000 * Math.random() - 3000000,
-    2 * 600000 * Math.random() - 600000 - 600000,
-  ];
-  pinClusterFeatures[i] = new OlFeature(new Point(coordinates));
-}
+// const clusterCount = 2000;
+// const clusterDistance = 50;
+// const pinClusterFeatures = new Array(clusterCount);
+// for (let i = 0; i < clusterCount; ++i) {
+//   const coordinates = [
+//     2 * 7000000 * Math.random() - 7000000,
+//     2 * 4500000 * Math.random() - 4500000,
+//   ];
+//   pinClusterFeatures[i] = new OlFeature(new Point(coordinates));
+// }
 
-let pinClusterSource = new OlSourceVector({
-  features: pinClusterFeatures,
-});
-
+// let pinClusterSource = new OlSourceVector({
+//   features: pinClusterFeatures,
+// });
 class App extends Component {
   constructor(props) {
     super(props);
@@ -59,21 +58,66 @@ class App extends Component {
         }),
       ],
     });
-
-    this.pinVectorLayer = new OlVectorLayer({
-      source: this.pinSourceVector,
-      style: new Style({
-        image: new Icon({
-          anchor: [0.5, 250],
-          anchorXUnits: "fraction",
-          anchorYUnits: "pixels",
-          scale: 0.1,
-          src:
-            "https://cdn0.iconfinder.com/data/icons/small-n-flat/24/678111-map-marker-256.png",
+    this.pinStyle = new Style({
+      image: new Circle({
+        radius: 10,
+        stroke: new Stroke({
+          color: "white",
         }),
       }),
-      minZoom: 5,
     });
+    this.pinVectorLayer = new OlVectorLayer({
+      source: this.pinSourceVector,
+      style: this.pinStyle,
+    });
+
+    // // Cluster Pin Location
+    // this.clusterSource = new OlSourceCluster({
+    //   distance: clusterDistance,
+    //   source: pinClusterSource,
+    // });
+
+    // this.styleCache = {};
+    // this.clusterVectorLayer = new OlVectorLayer({
+    //   source: this.clusterSource,
+    //   style: (feature) => {
+    //     const size = feature.get("features").length;
+    //     let style = this.styleCache[size];
+    //     if (!style) {
+    //       style =
+    //         size > 1
+    //           ? new Style({
+    //               image: new Circle({
+    //                 radius: size >= 10 ? size : size <= 4 ? 8 : size * 2,
+    //                 stroke: new Stroke({
+    //                   color: "white",
+    //                 }),
+    //                 fill: new Fill({
+    //                   color: "rgba(0, 0, 0, 0.5)",
+    //                 }),
+    //               }),
+    //               text: new Text({
+    //                 text: size.toString(),
+    //                 fill: new Fill({
+    //                   color: "#fff",
+    //                 }),
+    //               }),
+    //             })
+    //           : new Style({
+    //               image: new Icon({
+    //                 anchor: [0.5, 250],
+    //                 anchorXUnits: "fraction",
+    //                 anchorYUnits: "pixels",
+    //                 scale: 0.1,
+    //                 src:
+    //                   "https://cdn0.iconfinder.com/data/icons/small-n-flat/24/678111-map-marker-256.png",
+    //               }),
+    //             });
+    //       this.styleCache[size] = style;
+    //     }
+    //     return style;
+    //   },
+    // });
 
     // Interaction for draw pin location icon
     this.pinInteractionList = [
@@ -84,69 +128,12 @@ class App extends Component {
       new OlModify({ source: this.pinSourceVector }),
     ];
 
-    // Cluster Pin Location
-    this.clusterSource = new OlSourceCluster({
-      distance: clusterDistance,
-      source: pinClusterSource,
-    });
-
-    this.styleCache = {};
-    this.clusterVectorLayer = new OlVectorLayer({
-      source: this.clusterSource,
-      style: (feature) => {
-        const size = feature.get("features").length;
-        let style = this.styleCache[size];
-        if (!style) {
-          style =
-            size > 1
-              ? new Style({
-                  image: new Circle({
-                    radius:
-                      size >= 10
-                        ? size >= 50
-                          ? size / 2
-                          : size
-                        : size <= 4
-                        ? 8
-                        : size * 2,
-                    stroke: new Stroke({
-                      color: "white",
-                    }),
-                    fill: new Fill({
-                      color: "rgba(0, 0, 0, 0.5)",
-                    }),
-                  }),
-                  text: new Text({
-                    text: size.toString(),
-                    fill: new Fill({
-                      color: "#fff",
-                    }),
-                  }),
-                })
-              : new Style({
-                  image: new Icon({
-                    anchor: [0.5, 250],
-                    anchorXUnits: "fraction",
-                    anchorYUnits: "pixels",
-                    scale: 0.1,
-                    src:
-                      "https://cdn0.iconfinder.com/data/icons/small-n-flat/24/678111-map-marker-256.png",
-                  }),
-                });
-          this.styleCache[size] = style;
-        }
-        return style;
-      },
-      minZoom: 4.5,
-    });
-
     // Layers
     this.layers = [
       new OlTileLayer({
         source: new OlSourceOSM(),
       }),
       this.pinVectorLayer,
-      this.clusterVectorLayer,
     ];
 
     // Openlayers build map
@@ -198,9 +185,8 @@ class App extends Component {
     this.map.on("moveend", () => {
       let center = this.map.getView().getCenter();
       let zoom = this.map.getView().getZoom();
+      if (zoom <= 5) this.state.pin && this.togglePin();
       this.setState({ center, zoom });
-
-      if (zoom < 5) this.state.pin && this.togglePin();
     });
 
     this.map.on("click", (evt) => {
@@ -247,13 +233,14 @@ class App extends Component {
                   <hr />
                 </p>
                 <div className="pin-box">
-                  <u className="coordinate">New Pinned Coordinate</u>
+                  <u className="coordinate">Pinned Coordinate</u>
                   <div className="pin-box-container">
                     <p className="coordinate">
                       <br />
                       {this.state.pinnedCoordinate.map((pin, key) => (
                         <>
-                          {key + ": " + pin.X + ", " + pin.Y}
+                          X : {pin.X}
+                          <br />Y : {pin.Y}
                           <hr />
                         </>
                       ))}
@@ -267,7 +254,7 @@ class App extends Component {
                 >
                   Set default view coordinate
                 </button>
-                {this.state.zoom > 5 && (
+                {this.state.zoom >= 5 && (
                   <button
                     onClick={() => this.togglePin()}
                     className={`btn ${
