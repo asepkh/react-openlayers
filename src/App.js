@@ -1,7 +1,11 @@
 import React, { Component } from "react";
 
 import { MdLocationOn, MdLocationOff } from "react-icons/md";
-import { Draw as OlDraw, Modify as OlModify } from "ol/interaction";
+import {
+  Draw as OlDraw,
+  Modify as OlModify,
+  Select as OlSelect,
+} from "ol/interaction";
 import {
   OSM as OlSourceOSM,
   Vector as OlSourceVector,
@@ -24,6 +28,7 @@ import { Icon, Circle, Fill, Stroke, Style, Text } from "ol/style";
 
 import "./App.scss";
 import "ol/ol.css";
+import "ol-ext/dist/ol-ext.min.css";
 
 const initialOptions = {
   center: [53566969.48271899, -688971.3316195873],
@@ -41,7 +46,7 @@ for (let i = 0; i < clusterCount; ++i) {
   pinClusterFeatures[i] = new OlFeature(new Point(coordinates));
 }
 
-let pinClusterSource = new OlSourceVector({
+const pinClusterSource = new OlSourceVector({
   features: pinClusterFeatures,
 });
 
@@ -77,11 +82,14 @@ class App extends Component {
 
     // Interaction for draw pin location icon
     this.pinInteractionList = [
-      new OlDraw({
-        source: this.pinSourceVector,
-        type: "Point",
-      }),
-      new OlModify({ source: this.pinSourceVector }),
+      [
+        new OlDraw({
+          source: this.pinSourceVector,
+          type: "Point",
+        }),
+        new OlModify({ source: this.pinSourceVector }),
+      ],
+      [new OlSelect({ source: this.pinSourceVector })],
     ];
 
     // Cluster Pin Location
@@ -108,7 +116,7 @@ class App extends Component {
                           : size
                         : size <= 4
                         ? 8
-                        : size * 2,
+                        : size * 2, // Optimize oversize circle
                     stroke: new Stroke({
                       color: "white",
                     }),
@@ -175,13 +183,19 @@ class App extends Component {
 
   togglePin() {
     this.setState({ pin: !this.state.pin }, () =>
-      this.state.pin
-        ? this.pinInteractionList.map((interaction) =>
-            this.map.addInteraction(interaction)
-          )
-        : this.pinInteractionList.map((interaction) =>
-            this.map.removeInteraction(interaction)
-          )
+      this.pinInteractionList.map((type, key) =>
+        this.state.pin
+          ? this.pinInteractionList[key].map((interaction) =>
+              key
+                ? this.map.removeInteraction(interaction)
+                : this.map.addInteraction(interaction)
+            )
+          : this.pinInteractionList[key].map((interaction) =>
+              key
+                ? this.map.addInteraction(interaction)
+                : this.map.removeInteraction(interaction)
+            )
+      )
     );
   }
 
@@ -203,23 +217,30 @@ class App extends Component {
       if (zoom < 5) this.state.pin && this.togglePin();
     });
 
-    this.map.on("click", (evt) => {
-      console.log(evt.coordinate);
+    this.pinInteractionList[0][0].on("drawend", (evt) => {
+      const id = evt.feature.get("id"),
+        name = evt.feature.get("name"),
+        coordinates = evt.feature.getGeometry().flatCoordinates;
 
       this.setState({
-        pinnedCoordinate: [], // Reset
-      });
-
-      this.pinSourceVector.forEachFeature((feature) => {
-        const featureCoordinate = feature.getGeometry().flatCoordinates;
-        this.setState({
-          pinnedCoordinate: [
-            ...this.state.pinnedCoordinate,
-            { X: featureCoordinate[0], Y: featureCoordinate[1] }, // Refetch
-          ],
-        });
+        pinnedCoordinate: [
+          ...this.state.pinnedCoordinate,
+          { id, name, coordinates }, // Refetch
+        ],
       });
     });
+
+    // this.map.on("click", (evt) => {
+    //   console.log(evt.coordinate);
+
+    //   this.setState({
+    //     pinnedCoordinate: [], // Reset
+    //   });
+
+    //   this.pinSourceVector.forEachFeature((feature) => {
+
+    //   });
+    // });
   }
 
   componentDidUpdate() {
@@ -251,9 +272,9 @@ class App extends Component {
                   <div className="pin-box-container">
                     <p className="coordinate">
                       <br />
-                      {this.state.pinnedCoordinate.map((pin, key) => (
+                      {this.state.pinnedCoordinate.map((pin) => (
                         <>
-                          {key + ": " + pin.X + ", " + pin.Y}
+                          {pin.coordinates}
                           <hr />
                         </>
                       ))}
