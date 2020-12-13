@@ -11,6 +11,7 @@
     "ol-ext": "^3.1.17",
     "openlayers": "^4.6.5",
     "react": "^17.0.1",
+    "react-bootstrap": "^1.4.0",
     "react-dom": "^17.0.1",
     "react-icons": "^4.1.0",
     "react-openlayers": "^0.3.0",

@@ -1,11 +1,7 @@
 import React, { Component } from "react";
 
 import { MdLocationOn, MdLocationOff } from "react-icons/md";
-import {
-  Draw as OlDraw,
-  Modify as OlModify,
-  Select as OlSelect,
-} from "ol/interaction";
+import { Draw as OlDraw, Modify as OlModify } from "ol/interaction";
 import {
   OSM as OlSourceOSM,
   Vector as OlSourceVector,
@@ -24,78 +20,124 @@ import OlMap from "ol/Map";
 import OlView from "ol/View";
 
 import { Point } from "ol/geom";
-import { Icon, Circle, Fill, Stroke, Style, Text } from "ol/style";
+import { Circle, Fill, Stroke, Style, Text } from "ol/style";
+
+import Shadow from "ol-ext/style/Shadow";
+import FontSymbol from "ol-ext/style/FontSymbol";
+import Popup from "ol-ext/overlay/Popup";
+
+import { Modal, Form } from "react-bootstrap";
 
 import "./App.scss";
 import "ol/ol.css";
 import "ol-ext/dist/ol-ext.min.css";
 
+const clusterCount = 2000;
+const clusterDistance = 50;
 const initialOptions = {
   center: [53566969.48271899, -688971.3316195873],
   zoom: 5.1,
 };
-
-const clusterCount = 2000;
-const clusterDistance = 50;
-const pinClusterFeatures = new Array(clusterCount);
-for (let i = 0; i < clusterCount; ++i) {
-  const coordinates = [
-    54000000 + 2 * 3000000 * Math.random() - 3000000,
-    2 * 600000 * Math.random() - 600000 - 600000,
-  ];
-  pinClusterFeatures[i] = new OlFeature(new Point(coordinates));
-}
-
-const pinClusterSource = new OlSourceVector({
-  features: pinClusterFeatures,
-});
-
 class App extends Component {
   constructor(props) {
     super(props);
+    this.state = {
+      ...initialOptions,
+      mark: false,
+      markedCoordinate: [],
+      title: null,
+      desc: null,
+      featureCache: null,
+      modalShow: false,
+    };
 
-    this.state = { ...initialOptions, pin: false, pinnedCoordinate: [] };
-
-    // Pin Location Icon Layer
-    this.pinSourceVector = new OlSourceVector({
-      features: [
-        new OlFeature({
-          type: "icon",
+    // Mark Location Icon Layer
+    this.markSourceVector = new OlSourceVector();
+    this.markVectorLayer = new OlVectorLayer({
+      source: this.markSourceVector,
+      style: [
+        new Style({
+          image: new Shadow({
+            radius: 10,
+            blur: 5,
+            offsetX: 0,
+            offsetY: 0,
+            fill: new Fill({
+              color: "rgba(0,0,0,0.5)",
+            }),
+          }),
+        }),
+        new Style({
+          image: new FontSymbol({
+            form: "marker",
+            fontSize: 0.9,
+            radius: 18,
+            offsetY: -15,
+            glyph: "⦿",
+            gradient: false,
+            rotation: (10 * Math.PI) / 180,
+            fill: new Fill({
+              color: "#e74c3c",
+            }),
+            stroke: new Stroke({
+              color: "white",
+              width: 2,
+            }),
+            color: "white",
+          }),
+          stroke: new Stroke({
+            width: 2,
+            color: "#f80",
+          }),
+          fill: new Fill({
+            color: [255, 136, 0, 0.6],
+          }),
         }),
       ],
+      minZoom: 4.5,
     });
 
-    this.pinVectorLayer = new OlVectorLayer({
-      source: this.pinSourceVector,
-      style: new Style({
-        image: new Icon({
-          anchor: [0.5, 250],
-          anchorXUnits: "fraction",
-          anchorYUnits: "pixels",
-          scale: 0.1,
-          src:
-            "https://cdn0.iconfinder.com/data/icons/small-n-flat/24/678111-map-marker-256.png",
-        }),
+    // Interaction for draw mark
+    this.markInteractionList = [
+      new OlDraw({
+        source: this.markSourceVector,
+        type: "Point",
       }),
-      minZoom: 5,
-    });
-
-    // Interaction for draw pin location icon
-    this.pinInteractionList = [
-      [
-        new OlDraw({
-          source: this.pinSourceVector,
-          type: "Point",
-        }),
-        new OlModify({ source: this.pinSourceVector }),
-      ],
-      [new OlSelect({ source: this.pinSourceVector })],
+      new OlModify({ source: this.markSourceVector }),
     ];
 
-    // Cluster Pin Location
+    // Overlay popup
+    this.popup = new Popup({
+      popupClass: "default anim",
+      closeBox: true,
+      positioning: "bottom-auto",
+      autoPan: true,
+      autoPanAnimation: { duration: 100 },
+    });
+
+    // Cluster mark
+    this.markClusterFeatures = new Array(clusterCount);
+    for (let i = 0; i < clusterCount; ++i) {
+      const coordinates = [
+        54000000 + 2 * 3000000 * Math.random() - 3000000,
+        2 * 600000 * Math.random() - 600000 - 600000,
+      ];
+      this.markClusterFeatures[i] = new OlFeature({
+        geometry: new Point(coordinates),
+        title: "Random mark location",
+        desc:
+          "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin ut lorem id elit iaculis vestibulum ut eget libero. Cras eget.",
+        id: i,
+      });
+    }
+
+    this.markClusterSource = new OlSourceVector({
+      features: this.markClusterFeatures,
+    });
+
     this.clusterSource = new OlSourceCluster({
       distance: clusterDistance,
-      source: pinClusterSource,
+      source: this.markClusterSource,
     });
 
     this.styleCache = {};
@@ -116,7 +158,7 @@ class App extends Component {
                           : size
                         : size <= 4
                         ? 8
-                        : size * 2, // Optimize oversize circle
+                        : size * 2, // Optimize oversize circle cluster
                     stroke: new Stroke({
                       color: "white",
                     }),
@@ -131,16 +173,44 @@ class App extends Component {
                     }),
                   }),
                 })
-              : new Style({
-                  image: new Icon({
-                    anchor: [0.5, 250],
-                    anchorXUnits: "fraction",
-                    anchorYUnits: "pixels",
-                    scale: 0.1,
-                    src:
-                      "https://cdn0.iconfinder.com/data/icons/small-n-flat/24/678111-map-marker-256.png",
+              : [
+                  new Style({
+                    image: new Shadow({
+                      radius: 10,
+                      blur: 5,
+                      offsetX: 0,
+                      offsetY: 0,
+                      fill: new Fill({
+                        color: "rgba(0,0,0,0.5)",
+                      }),
+                    }),
                   }),
-                });
+                  new Style({
+                    image: new FontSymbol({
+                      form: "marker",
+                      fontSize: 0.9,
+                      radius: 18,
+                      rotation: (10 * Math.PI) / 180, // Random from -20 to 20
+                      glyph: "⦿",
+                      gradient: false,
+                      fill: new Fill({
+                        color: "gray",
+                      }),
+                      stroke: new Stroke({
+                        color: "white",
+                        width: 2,
+                      }),
+                      color: "white",
+                    }),
+                    stroke: new Stroke({
+                      width: 2,
+                      color: "#f80",
+                    }),
+                    fill: new Fill({
+                      color: [255, 136, 0, 0.6],
+                    }),
+                  }),
+                ];
           this.styleCache[size] = style;
         }
         return style;
@@ -153,8 +223,8 @@ class App extends Component {
       new OlTileLayer({
         source: new OlSourceOSM(),
       }),
-      this.pinVectorLayer,
       this.clusterVectorLayer,
+      this.markVectorLayer,
     ];
 
     // Openlayers build map
@@ -178,30 +248,39 @@ class App extends Component {
         center: this.state.center,
         zoom: this.state.zoom,
       }),
+      overlays: [this.popup],
     });
   }
 
-  togglePin() {
-    this.setState({ pin: !this.state.pin }, () =>
-      this.pinInteractionList.map((type, key) =>
-        this.state.pin
-          ? this.pinInteractionList[key].map((interaction) =>
-              key
-                ? this.map.removeInteraction(interaction)
-                : this.map.addInteraction(interaction)
-            )
-          : this.pinInteractionList[key].map((interaction) =>
-              key
-                ? this.map.addInteraction(interaction)
-                : this.map.removeInteraction(interaction)
-            )
-      )
-    );
-  }
+  handleChange = (event) => {
+    this.setState({ [event.target.name]: event.target.value });
+  };
 
-  updateMap() {
-    this.map.getView().setCenter(this.state.center);
-    this.map.getView().setZoom(this.state.zoom);
+  handleSubmit = (event) => {
+    event.preventDefault();
+    this.state.featureCache.setProperties({
+      title: this.state.title,
+      desc: this.state.desc,
+    });
+    this.setState({ title: null, desc: null, modalShow: false });
+  };
+
+  handleClose = (event) => {
+    this.setState({ title: null, desc: null, modalShow: false }, () => {
+      this.markSourceVector.removeFeature(this.state.featureCache);
+    });
+  };
+
+  toggleMark() {
+    this.setState(
+      (prevState) => ({ mark: !prevState.mark }),
+      () =>
+        this.markInteractionList.map((interaction) =>
+          this.state.mark
+            ? this.map.addInteraction(interaction)
+            : this.map.removeInteraction(interaction)
+        )
+    );
   }
 
   componentDidMount() {
@@ -209,42 +288,57 @@ class App extends Component {
     this.map.setTarget("map");
 
     // Add map event callback
+    this.map.on("click", (evt) => {
+      if (this.state.mark) return;
+
+      let feature = this.map.forEachFeatureAtPixel(evt.pixel, (feature) => {
+        return feature;
+      });
+
+      if (feature) {
+        let coordinates = feature.getGeometry().getCoordinates(),
+          element;
+        const isCluster = feature.get("features");
+
+        if (isCluster) {
+          const clusterLength = isCluster.length;
+          if (clusterLength > 1)
+            element = `<b>Cluster Zone (${clusterLength} Mark)</b>`;
+          else {
+            element = `<b>${isCluster[0].getProperties().title} (${
+              isCluster[0].getProperties().id
+            })</b><p>${isCluster[0].getProperties().desc}</p>`;
+          }
+        } else {
+          element = `<b>${feature.getProperties().title} 
+          </b><p>${feature.getProperties().desc}</p>`;
+        }
+
+        this.popup.show(coordinates, element);
+        console.log(feature);
+      } else {
+        this.popup.hide();
+      }
+    });
+
     this.map.on("moveend", () => {
+      // Update coordinate and zoom state
       let center = this.map.getView().getCenter();
       let zoom = this.map.getView().getZoom();
       this.setState({ center, zoom });
 
-      if (zoom < 5) this.state.pin && this.togglePin();
+      if (zoom < 4.5) this.state.mark && this.toggleMark();
     });
 
-    this.pinInteractionList[0][0].on("drawend", (evt) => {
-      const id = evt.feature.get("id"),
-        name = evt.feature.get("name"),
-        coordinates = evt.feature.getGeometry().flatCoordinates;
-
-      this.setState({
-        pinnedCoordinate: [
-          ...this.state.pinnedCoordinate,
-          { id, name, coordinates }, // Refetch
-        ],
-      });
+    // Drawend mark event
+    this.markInteractionList[0].on("drawend", (evt) => {
+      this.setState(
+        {
+          featureCache: evt.feature,
+        },
+        () => this.setState({ modalShow: true })
+      );
     });
-
-    // this.map.on("click", (evt) => {
-    //   console.log(evt.coordinate);
-
-    //   this.setState({
-    //     pinnedCoordinate: [], // Reset
-    //   });
-
-    //   this.pinSourceVector.forEachFeature((feature) => {
-
-    //   });
-    // });
-  }
-
-  componentDidUpdate() {
-    this.updateMap();
   }
 
   render() {
@@ -253,7 +347,53 @@ class App extends Component {
         <div className="container-fluid">
           <div className="row">
             <div className="col-sm-10" style={{ padding: 0 }}>
-              <div id="map" className="map"></div>
+              <div id="map" className="map">
+                <Modal
+                  show={this.state.modalShow}
+                  onHide={this.handleClose}
+                  backdrop="static"
+                  keyboard={false}
+                >
+                  <Form onSubmit={this.handleSubmit}>
+                    <Modal.Header closeButton>
+                      <Modal.Title>Mark options</Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+                      <Form.Group>
+                        <Form.Control
+                          type="text"
+                          placeholder="Enter mark title"
+                          name="title"
+                          value={this.state.title}
+                          onChange={this.handleChange}
+                        />
+                        <Form.Text className="text-muted">*required</Form.Text>
+                      </Form.Group>
+                      <Form.Group>
+                        <Form.Control
+                          as="textarea"
+                          placeholder="Enter mark description"
+                          name="desc"
+                          onChange={this.handleChange}
+                        />
+                        <Form.Text className="text-muted">*required</Form.Text>
+                      </Form.Group>
+                    </Modal.Body>
+                    <Modal.Footer>
+                      <button
+                        className="btn btn-danger"
+                        value={this.state.desc}
+                        onClick={this.handleClose}
+                      >
+                        Close
+                      </button>
+                      <button type="submit" className="btn btn-primary">
+                        Save
+                      </button>
+                    </Modal.Footer>
+                  </Form>
+                </Modal>
+              </div>
             </div>
             <div className="col-sm-2">
               <div className="sidebar">
@@ -267,14 +407,14 @@ class App extends Component {
                   <br /> Zoom : {this.state.zoom}
                   <hr />
                 </p>
-                <div className="pin-box">
-                  <u className="coordinate">New Pinned Coordinate</u>
-                  <div className="pin-box-container">
+                <div className="mark-box">
+                  <u className="coordinate">New mark location list</u>
+                  <div className="mark-box-container">
                     <p className="coordinate">
                       <br />
-                      {this.state.pinnedCoordinate.map((pin) => (
+                      {this.state.markedCoordinate.map((mark) => (
                         <>
-                          {pin.coordinates}
+                          {mark.name}
                           <hr />
                         </>
                       ))}
@@ -283,19 +423,22 @@ class App extends Component {
                 </div>
                 <br />
                 <button
-                  onClick={() => this.setState(initialOptions)}
+                  onClick={() => {
+                    this.map.getView().setCenter(initialOptions.center);
+                    this.map.getView().setZoom(initialOptions.zoom);
+                  }}
                   className="btn btn-light btn-block"
                 >
                   Set default view coordinate
                 </button>
-                {this.state.zoom > 5 && (
+                {this.state.zoom > 4.5 && (
                   <button
-                    onClick={() => this.togglePin()}
+                    onClick={() => this.toggleMark()}
                     className={`btn ${
-                      this.state.pin ? "btn-danger" : "btn-success"
+                      this.state.mark ? "btn-danger" : "btn-success"
                     } btn-block`}
                   >
-                    {this.state.pin ? (
+                    {this.state.mark ? (
                       <MdLocationOff size="26" />
                     ) : (
                       <MdLocationOn size="26" />
