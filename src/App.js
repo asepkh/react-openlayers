@@ -304,7 +304,7 @@ class App extends Component {
     );
   };
 
-  flyTo = (location) => {
+  flyTo = (location, zoomEnd) => {
     let duration = 2000,
       zoom = this.map.getView().getZoom(),
       parts = 2,
@@ -330,11 +330,11 @@ class App extends Component {
 
     this.map.getView().animate(
       {
-        zoom: zoom - 0.25,
+        zoom: zoom - 0.6,
         duration: duration / 2,
       },
       {
-        zoom: zoom + 1.5,
+        zoom: zoomEnd ? zoomEnd : zoom + 1.5,
         duration: duration / 2,
       },
       callback
@@ -438,13 +438,6 @@ class App extends Component {
                       </Form.Group>
                     </Modal.Body>
                     <Modal.Footer>
-                      <button
-                        className="btn btn-danger"
-                        value={this.state.desc}
-                        onClick={this.handleClose}
-                      >
-                        Close
-                      </button>
                       <button type="submit" className="btn btn-primary">
                         Save
                       </button>
@@ -484,10 +477,9 @@ class App extends Component {
                 </div>
                 <br />
                 <button
-                  onClick={() => {
-                    this.map.getView().setCenter(initialOptions.center);
-                    this.map.getView().setZoom(initialOptions.zoom);
-                  }}
+                  onClick={() =>
+                    this.flyTo(initialOptions.center, initialOptions.zoom)
+                  }
                   className="btn btn-light btn-block"
                 >
                   Set default view coordinate
