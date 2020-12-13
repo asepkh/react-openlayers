@@ -44,9 +44,9 @@ class App extends Component {
     this.state = {
       ...initialOptions,
       mark: false,
-      markedCoordinate: [],
-      title: null,
-      desc: null,
+      markedFeature: [],
+      title: "",
+      desc: "",
       featureCache: null,
       modalShow: false,
     };
@@ -258,20 +258,41 @@ class App extends Component {
 
   handleSubmit = (event) => {
     event.preventDefault();
+    if (this.state.title.length <= 3 || this.state.desc.length <= 10) {
+      alert(
+        "Fill the form correctly, (min 3 character on title and 10 character on description"
+      );
+      return;
+    }
+
     this.state.featureCache.setProperties({
       title: this.state.title,
       desc: this.state.desc,
     });
-    this.setState({ title: null, desc: null, modalShow: false });
+    this.setState((prevState) => ({
+      title: "",
+      desc: "",
+      modalShow: false,
+      featureCache: null,
+      markedFeature: [
+        ...prevState.markedFeature,
+        {
+          id: prevState.markedFeature + 1,
+          title: prevState.title,
+          desc: prevState.desc,
+          coordinate: prevState.featureCache.getGeometry().getCoordinates(),
+        },
+      ],
+    }));
   };
 
-  handleClose = (event) => {
-    this.setState({ title: null, desc: null, modalShow: false }, () => {
+  handleClose = () => {
+    this.setState({ title: "", desc: "", modalShow: false }, () => {
       this.markSourceVector.removeFeature(this.state.featureCache);
     });
   };
 
-  toggleMark() {
+  toggleMark = () => {
     this.setState(
       (prevState) => ({ mark: !prevState.mark }),
       () =>
@@ -281,7 +302,44 @@ class App extends Component {
             : this.map.removeInteraction(interaction)
         )
     );
-  }
+  };
+
+  flyTo = (location) => {
+    let duration = 2000,
+      zoom = this.map.getView().getZoom(),
+      parts = 2,
+      called = false;
+
+    function callback(complete) {
+      --parts;
+      if (called) {
+        return;
+      }
+      if (parts === 0 || !complete) {
+        called = true;
+      }
+    }
+
+    this.map.getView().animate(
+      {
+        center: location,
+        duration: duration,
+      },
+      callback
+    );
+
+    this.map.getView().animate(
+      {
+        zoom: zoom - 0.25,
+        duration: duration / 2,
+      },
+      {
+        zoom: zoom + 1.5,
+        duration: duration / 2,
+      },
+      callback
+    );
+  };
 
   componentDidMount() {
     // Set map target (DOM)
@@ -411,11 +469,14 @@ class App extends Component {
                   <u className="coordinate">New mark location list</u>
                   <div className="mark-box-container">
                     <p className="coordinate">
-                      <br />
-                      {this.state.markedCoordinate.map((mark) => (
+                      {this.state.markedFeature.map((mark) => (
                         <>
-                          {mark.name}
-                          <hr />
+                          <button
+                            className="btn btn-primary btn-sm btn-block"
+                            onClick={() => this.flyTo(mark.coordinate)}
+                          >
+                            {mark.title}
+                          </button>
                         </>
                       ))}
                     </p>
