@@ -280,7 +280,7 @@ class App extends Component {
       markedFeature: [
         ...prevState.markedFeature,
         {
-          id: prevState.markedFeature + 1,
+          id: prevState.markedFeature.length + 1,
           title: prevState.title,
           desc: prevState.desc,
           coordinate: prevState.featureCache.getGeometry().getCoordinates(),

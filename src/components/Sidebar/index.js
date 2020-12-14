@@ -38,7 +38,7 @@ const Sidebar = (props) => {
                   onClick={() => flyTo(mark.coordinate)}
                   block
                 >
-                  {mark.title + " (" + key + ")"}
+                  {mark.title + " (" + mark.id + ")"}
                 </Button>
               </OverlayTrigger>
             ))}
