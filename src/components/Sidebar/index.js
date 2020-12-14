@@ -1,4 +1,5 @@
 import React from "react";
+import { OverlayTrigger, Tooltip, Button } from "react-bootstrap";
 import { MdLocationOn, MdLocationOff } from "react-icons/md";
 
 const Sidebar = (props) => {
@@ -16,18 +17,30 @@ const Sidebar = (props) => {
         <hr />
       </p>
       <div className="mark-box">
-        <u className="coordinate">New mark location list</u>
+        <u className="coordinate">
+          New mark location list | Total: {options.markedFeature.length}
+        </u>
         <div className="mark-box-container">
           <p className="coordinate">
-            {options.markedFeature.map((mark) => (
-              <>
-                <button
-                  className="btn btn-primary btn-sm btn-block"
+            {options.markedFeature.map((mark, key) => (
+              <OverlayTrigger
+                placement="left"
+                overlay={
+                  <Tooltip>
+                    X: {Math.round(mark.coordinate[0])}
+                    <br />
+                    Y: {Math.round(mark.coordinate[1])}
+                  </Tooltip>
+                }
+              >
+                <Button
+                  variant="primary"
                   onClick={() => flyTo(mark.coordinate)}
+                  block
                 >
-                  {mark.title}
-                </button>
-              </>
+                  {mark.title + " (" + key + ")"}
+                </Button>
+              </OverlayTrigger>
             ))}
           </p>
         </div>

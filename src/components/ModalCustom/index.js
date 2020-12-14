@@ -8,33 +8,34 @@ const ModalCustom = (props) => {
       <Modal.Header closeButton>
         <Modal.Title>Mark options</Modal.Title>
       </Modal.Header>
-      <Modal.Body>
-        <Form onSubmit={handleSubmit}>
+      <Form onSubmit={handleSubmit}>
+        <Modal.Body>
           <Form.Group>
             <Form.Control
               type="text"
-              placeholder="Enter mark title"
+              placeholder="Enter mark title ..."
               name="title"
               onChange={handleChange}
             />
-            <Form.Text className="text-muted">*required</Form.Text>
+            <Form.Text className="text-muted">* required</Form.Text>
           </Form.Group>
           <Form.Group>
             <Form.Control
               as="textarea"
-              placeholder="Enter mark description"
+              placeholder="Enter mark description ..."
               name="desc"
               onChange={handleChange}
             />
-            <Form.Text className="text-muted">*required</Form.Text>
+            <Form.Text className="text-muted">* required</Form.Text>
           </Form.Group>
-          <Form.Group>
-            <Button type="submit" variant="primary">
-              Save
-            </Button>
-          </Form.Group>
-        </Form>
-      </Modal.Body>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button value="Save" as="input" type="submit" variant="primary" />
+          <Button variant="danger" onClick={handleClose}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Form>
     </Modal>
   );
 };

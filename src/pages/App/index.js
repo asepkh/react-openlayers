@@ -260,6 +260,7 @@ class App extends Component {
 
   handleSubmit = (event) => {
     event.preventDefault();
+
     if (this.state.title.length <= 3 || this.state.desc.length <= 10) {
       alert(
         "Fill the form correctly, (min 3 character on title and 10 character on description"
