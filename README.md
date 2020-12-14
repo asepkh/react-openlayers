@@ -1,5 +1,9 @@
 # Openlayers (v6.4.3) Implementation with ReactJS
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> a9fdcb51d596e5b5b0d0652fd588f8d048a06fad
 > [<img src="https://res.cloudinary.com/literature/image/upload/v1607970710/literature/openlayers_yc9nui.png" alt="Openlayers">](http://asepkh.netlify.app)
 
 > click the image above to see the project || or visit http://asepkh.netlify.app
