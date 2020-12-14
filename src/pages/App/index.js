@@ -1,6 +1,5 @@
 import React, { Component } from "react";
 
-import { MdLocationOn, MdLocationOff } from "react-icons/md";
 import { Draw as OlDraw, Modify as OlModify } from "ol/interaction";
 import {
   OSM as OlSourceOSM,
@@ -26,7 +25,10 @@ import Shadow from "ol-ext/style/Shadow";
 import FontSymbol from "ol-ext/style/FontSymbol";
 import Popup from "ol-ext/overlay/Popup";
 
-import { Modal, Form } from "react-bootstrap";
+import ModalCustom from "../../components/ModalCustom";
+import Sidebar from "../../components/Sidebar";
+
+import { Container, Row, Col } from "react-bootstrap";
 
 import "./App.scss";
 import "ol/ol.css";
@@ -401,108 +403,27 @@ class App extends Component {
 
   render() {
     return (
-      <div id="fullscreen" className="fullscreen">
-        <div className="container-fluid">
-          <div className="row">
-            <div className="col-sm-10" style={{ padding: 0 }}>
-              <div id="map" className="map">
-                <Modal
-                  show={this.state.modalShow}
-                  onHide={this.handleClose}
-                  backdrop="static"
-                  keyboard={false}
-                >
-                  <Form onSubmit={this.handleSubmit}>
-                    <Modal.Header closeButton>
-                      <Modal.Title>Mark options</Modal.Title>
-                    </Modal.Header>
-                    <Modal.Body>
-                      <Form.Group>
-                        <Form.Control
-                          type="text"
-                          placeholder="Enter mark title"
-                          name="title"
-                          value={this.state.title}
-                          onChange={this.handleChange}
-                        />
-                        <Form.Text className="text-muted">*required</Form.Text>
-                      </Form.Group>
-                      <Form.Group>
-                        <Form.Control
-                          as="textarea"
-                          placeholder="Enter mark description"
-                          name="desc"
-                          onChange={this.handleChange}
-                        />
-                        <Form.Text className="text-muted">*required</Form.Text>
-                      </Form.Group>
-                    </Modal.Body>
-                    <Modal.Footer>
-                      <button type="submit" className="btn btn-primary">
-                        Save
-                      </button>
-                    </Modal.Footer>
-                  </Form>
-                </Modal>
-              </div>
-            </div>
-            <div className="col-sm-2">
-              <div className="sidebar">
-                <h4>React Openlayers</h4>
-                <p className="note">( Sidebar )</p>
-                <hr />
-                <p className="coordinate">
-                  <u>Current Coordinate</u>
-                  <br />X : {this.state.center[0]}
-                  <br />Y : {this.state.center[1]}
-                  <br /> Zoom : {this.state.zoom}
-                  <hr />
-                </p>
-                <div className="mark-box">
-                  <u className="coordinate">New mark location list</u>
-                  <div className="mark-box-container">
-                    <p className="coordinate">
-                      {this.state.markedFeature.map((mark) => (
-                        <>
-                          <button
-                            className="btn btn-primary btn-sm btn-block"
-                            onClick={() => this.flyTo(mark.coordinate)}
-                          >
-                            {mark.title}
-                          </button>
-                        </>
-                      ))}
-                    </p>
-                  </div>
-                </div>
-                <br />
-                <button
-                  onClick={() =>
-                    this.flyTo(initialOptions.center, initialOptions.zoom)
-                  }
-                  className="btn btn-light btn-block"
-                >
-                  Set default view coordinate
-                </button>
-                {this.state.zoom > 4.5 && (
-                  <button
-                    onClick={() => this.toggleMark()}
-                    className={`btn ${
-                      this.state.mark ? "btn-danger" : "btn-success"
-                    } btn-block`}
-                  >
-                    {this.state.mark ? (
-                      <MdLocationOff size="26" />
-                    ) : (
-                      <MdLocationOn size="26" />
-                    )}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <Container className="fullscreen" id="fullscreen" fluid>
+        <Row>
+          <Col sm={10}>
+            <div className="map" id="map"></div>
+          </Col>
+          <Col sm={2}>
+            <Sidebar
+              options={this.state}
+              initialOptions={this.state.initialOptions}
+              flyTo={this.flyTo}
+              toggleMark={this.toggleMark}
+            />
+          </Col>
+        </Row>
+        <ModalCustom
+          show={this.state.modalShow}
+          handleClose={this.handleClose}
+          handleSubmit={this.handleSubmit}
+          handleChange={this.handleChange}
+        />
+      </Container>
     );
   }
 }
